@@ -1,49 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --sage: #F2F9F5;
+  --emerald: #059669;
+  --emerald-deep: #047857;
+  --forest: #064e3b;
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+html, body {
+  background: var(--sage);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  z-index: 1;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(5, 150, 105, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(5, 150, 105, 0.25);
+}
+
+.leaflet-popup-content {
+  margin: 16px 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(5, 150, 105, 0.5); }
+  50% { box-shadow: 0 0 30px rgba(5, 150, 105, 0.9); }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes heat-pulse {
+  0%, 100% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 50px rgba(239, 68, 68, 0.8); }
+}
+
+.heat-risk-glow {
+  animation: heat-pulse 2.5s ease-in-out infinite;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(167, 243, 208, 0.6);
+  box-shadow: 0 20px 40px -12px rgba(6, 78, 59, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(5, 150, 105, 0.4);
+  box-shadow: 0 30px 60px -15px rgba(6, 78, 59, 0.15);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(5, 150, 105, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(5, 150, 105, 0.6);
+}
+
+/* Enhanced button hover effects */
+button {
+  transition: all 0.2s ease;
+}
+
+/* Smooth transitions for dark mode */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+/* 🌙 Dark Mode Map Tiles - CSS Filter Magic */
+.dark-map .leaflet-tile {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) saturate(40%);
+}
+/* ✨ Shimmer gradient text for Tayyab signature */
+@keyframes shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s linear infinite;
 }
