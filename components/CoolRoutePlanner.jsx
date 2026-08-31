@@ -7,7 +7,7 @@ export default function CoolRoutePlanner({ darkMode }) {
   const [origin, setOrigin] = useState('City Hall');
   const [destination, setDestination] = useState('Central Park');
   const [calculated, setCalculated] = useState(true);
-
+const [isAnalyzing, setIsAnalyzing] = useState(false);
   const directRoute = { distance: 2.4, time: 28, heatStress: 78, avgTemp: 34.2, shadePercent: 12 };
   const coolPath = { distance: 2.9, time: 35, heatStress: 42, avgTemp: 29.8, shadePercent: 68, tempSaved: 4.4 };
 
@@ -33,15 +33,28 @@ export default function CoolRoutePlanner({ darkMode }) {
         <RouteInput label="To" value={destination} onChange={setDestination} darkMode={darkMode} />
       </div>
 
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => setCalculated(true)}
-        className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-base font-semibold shadow-lg shadow-emerald-500/30 mb-4"
-      >
-        Analyze Routes
-      </motion.button>
-
+     <motion.button
+  whileHover={{ scale: 1.02 }}
+  whileTap={{ scale: 0.98 }}
+  onClick={() => {
+    setIsAnalyzing(true);
+    setTimeout(() => {
+      setCalculated(true);
+      setIsAnalyzing(false);
+    }, 1500); // 1.5 second ka fake loading time
+  }}
+  disabled={isAnalyzing}
+  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-base font-semibold shadow-lg shadow-emerald-500/30 mb-4 disabled:opacity-70"
+>
+  {isAnalyzing ? (
+    <span className="flex items-center justify-center gap-2">
+      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+      Analyzing Thermal Corridors...
+    </span>
+  ) : (
+    "Analyze Routes"
+  )}
+</motion.button>
       {calculated && (
         <div className="space-y-3">
           <RouteCard title="Direct Route" icon={Sun} data={directRoute} color="from-orange-100 to-rose-100" textColor="text-orange-700" darkMode={darkMode} />
