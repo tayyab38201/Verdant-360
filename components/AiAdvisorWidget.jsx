@@ -58,8 +58,8 @@ export default function AiAdvisorWidget({ darkMode }) {
   const generateResponse = (query) => {
     const q = query.toLowerCase();
 
-    // 🌿 Project overview / features
-    if (q.includes('what can you do') || q.includes('about') || q.includes('project') || q.includes('platform') || q.includes('feature') || q.includes('verdant') || q.includes('what is this') || q.includes('kya hai') || q.includes('how does this work') || q.includes('help')) {
+    // 🌿 Project overview / features (UPDATED: Added dashboard, urban climate, what do, what does)
+    if (q.includes('what can you do') || q.includes('about') || q.includes('project') || q.includes('platform') || q.includes('feature') || q.includes('verdant') || q.includes('what is this') || q.includes('kya hai') || q.includes('how does this work') || q.includes('help') || q.includes('dashboard') || q.includes('urban climate') || q.includes('what do') || q.includes('what does')) {
       return '🌿 **VERDANT 360 — Hyperlocal Eco-Intelligence Platform**\n\nI can guide you through everything on this dashboard:\n\n• 🗺️ Thermal Intelligence Map — live 2m heat tiles, tap any circle for hyperlocal readings\n• 🌡️ Thermal Telemetry — apparent temp, heat index & humidity radial gauges\n• 🚶 CoolPath™ — shaded route vs direct route comparison with temperature saved\n• 🌳 Tree Canopy Simulator — model greening impact (-0.5°C to -3.2°C cooling)\n• 🛡️ OSHA Work Safety — WBGT risk matrix + live rest/hydration countdown\n• 🌬️ Air Quality Layer — live PM2.5, PM10 & US AQI via Open-Meteo\n• 📊 Vulnerability Index — combined Heat & Air Pollution score (0-100)\n• 📄 Report Exporter — one-click PDF / CSV / GeoJSON civic downloads\n\nAsk me about any feature, heat risks, or covered cities!';
     }
 
