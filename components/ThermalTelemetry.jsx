@@ -43,7 +43,7 @@ export default function ThermalTelemetry({ liveData, darkMode }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <GaugeCard data={tempData} max={50} value={temp} unit="°C" label="2m Apparent Temp" icon={Thermometer} color="text-rose-600" darkMode={darkMode} />
         <GaugeCard data={heatIndexData} max={55} value={heatIndex} unit="°C" label="Heat Index" icon={TrendingUp} color="text-orange-600" darkMode={darkMode} />
         <GaugeCard data={humidityData} max={100} value={humidity} unit="%" label="Relative Humidity" icon={Droplets} color="text-blue-600" darkMode={darkMode} />
@@ -69,14 +69,26 @@ function GaugeCard({ data, max, value, unit, label, icon: Icon, color, darkMode 
 
   return (
     <motion.div
-      whileHover={{ scale: 1.03 }}
-      className={`rounded-xl p-3 border ${
-        darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-white/60 border-emerald-100/80'
+      whileHover={{ scale: 1.05, y: -4 }}
+      transition={{ duration: 0.3 }}
+      className={`rounded-xl p-4 border transition-all duration-300 group cursor-pointer ${
+        darkMode 
+          ? 'bg-slate-800/50 border-slate-700 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/10' 
+          : 'bg-white/60 border-emerald-100/80 hover:border-emerald-400 hover:shadow-2xl hover:shadow-emerald-500/20'
       }`}
     >
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon className={`w-4 h-4 ${color}`} />
-        <span className={`text-[10px] uppercase tracking-wider font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</span>
+      <div className="flex items-center gap-2 mb-2">
+        <motion.div
+          whileHover={{ rotate: 10, scale: 1.1 }}
+          className={`w-10 h-10 rounded-lg bg-gradient-to-br ${
+            label.includes('Temp') ? 'from-rose-500 to-orange-600' : 
+            label.includes('Heat') ? 'from-orange-500 to-amber-600' : 
+            'from-blue-500 to-cyan-600'
+          } flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow`}
+        >
+          <Icon className="w-6 h-6 text-white" />
+        </motion.div>
+        <span className={`text-[11px] uppercase tracking-wider font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</span>
       </div>
       <div className="relative h-24 w-24 mx-auto">
         <ResponsiveContainer width="100%" height="100%">
@@ -90,7 +102,7 @@ function GaugeCard({ data, max, value, unit, label, icon: Icon, color, darkMode 
           <span className={`text-[10px] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{unit}</span>
         </div>
       </div>
-      <div className={`mt-2 h-1 rounded-full overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
+      <div className={`mt-2 h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
