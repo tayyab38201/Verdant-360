@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trees, TrendingDown, Cloud, Wind } from 'lucide-react';
 
-export default function GreeningSimulator({ darkMode }) {
+export default function GreeningSimulator({ liveData, darkMode }) {
   const [canopy, setCanopy] = useState(15);
-  const baseTemp = 34.5;
-
+  const baseTemp = liveData?.temp || 34.5;
+  
   const coolingEffect = Math.min(3.2, canopy * 0.064);
   const newTemp = baseTemp - coolingEffect;
   const co2Offset = canopy * 12.4;
