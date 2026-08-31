@@ -192,8 +192,8 @@ export default function Home() {
           </div>
 
           <div className="space-y-6">
-            <HydrationSafetyWidget darkMode={darkMode} />
-            <GreeningSimulator darkMode={darkMode} />
+            <HydrationSafetyWidget liveData={liveData} darkMode={darkMode} />
+<GreeningSimulator liveData={liveData} darkMode={darkMode} />
             <CoolRoutePlanner darkMode={darkMode} />
           </div>
         </div>
