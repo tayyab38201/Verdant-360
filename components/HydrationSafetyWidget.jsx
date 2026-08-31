@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Clock, Volume2, VolumeX } from 'lucide-react';
 
-export default function HydrationSafetyWidget({ darkMode }) {
-  const [wbgt, setWbgt] = useState(28.5);
+export default function HydrationSafetyWidget({ liveData, darkMode }) {
+  const [wbgt, setWbgt] = useState(liveData?.wbgt || 28.5);
   const [restInterval, setRestInterval] = useState(45);
   const [timeLeft, setTimeLeft] = useState(45 * 60);
   const [isRunning, setIsRunning] = useState(true);
