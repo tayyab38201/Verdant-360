@@ -191,9 +191,9 @@ export default function Home() {
             <ThermalTelemetry liveData={liveData} darkMode={darkMode} />
           </div>
 
-          <div className="space-y-6">
+                    <div className="space-y-6">
             <HydrationSafetyWidget liveData={liveData} darkMode={darkMode} />
-<GreeningSimulator liveData={liveData} darkMode={darkMode} />
+            <GreeningSimulator liveData={liveData} darkMode={darkMode} />
             <CoolRoutePlanner darkMode={darkMode} />
           </div>
         </div>
@@ -348,7 +348,7 @@ export default function Home() {
         </motion.footer>
       </main>
 
-      <AiAdvisorWidget darkMode={darkMode} />
+            <AiAdvisorWidget liveData={liveData} darkMode={darkMode} />
     </div>
   );
 }
