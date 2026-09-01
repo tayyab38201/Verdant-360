@@ -74,7 +74,7 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
     }
 
     // 2.  REAL-TIME Dashboard Report Analysis (MUST BE BEFORE EXPORT)
-    if (q.includes('analyze report') || q.includes('report analysis') || q.includes('current summary') || q.includes('dashboard summary') || q.includes('analyze data')) {
+       if (q.includes('analyze report') || q.includes('analyze current report') || q.includes('report analysis') || q.includes('current summary') || q.includes('dashboard summary') || q.includes('analyze data')) {
       const currentTemp = liveData?.temp || 32.5;
       const currentAQI = liveData?.aqi || 45;
       const currentHumidity = liveData?.humidity || 58;
