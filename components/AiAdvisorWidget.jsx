@@ -11,6 +11,7 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
       content: "Hi! I'm your VERDANT 360 Climate Advisor 🌿 I know everything about this platform — features, US city coverage, heat risks, cooling strategies & more. Ask away!",
     },
   ]);
+  
   const [input, setInput] = useState('');
   const chatRef = useRef(null);
   const isDragging = useRef(false);
