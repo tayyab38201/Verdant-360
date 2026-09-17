@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-const MODELS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
-
 export async function POST(req) {
   try {
     const { message, liveData, type } = await req.json();
@@ -36,56 +34,53 @@ Answer concisely (max 120 words). Use markdown formatting (bold **text**, bullet
     }
 
     const prompt = context + '\n\nUser question: ' + (message || 'Generate executive summary');
-    let lastError = 'Unknown error';
 
-    for (const model of MODELS) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 9000);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
 
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': key,
-            },
-            signal: controller.signal,
-            body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
-            }),
-          }
-        );
-        clearTimeout(timer);
-
-        if (res.ok) {
-          const data = await res.json();
-          const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (reply) {
-            return NextResponse.json({ success: true, reply });
-          }
-          lastError = 'Empty reply from ' + model;
-          continue;
-        }
-
-        const errData = await res.json().catch(() => null);
-        lastError = `HTTP ${res.status}: ${errData?.error?.message || 'no message'}`;
-
-        if (res.status === 403 || res.status === 401) {
-          break;
-        }
-      } catch (e) {
-        clearTimeout(timer);
-        lastError = e.name === 'AbortError' ? 'Request timeout' : e.message;
+    // EXACT CURL FORMAT: Header only, no query param, gemini-flash-latest
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key.trim(),
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: prompt }
+              ]
+            }
+          ],
+        }),
       }
+    );
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      const errMsg = errData?.error?.message || `HTTP ${res.status}`;
+      console.error('Gemini error:', errMsg);
+      return NextResponse.json({ success: false, error: errMsg });
     }
 
-    console.error('Gemini final error:', lastError);
-    return NextResponse.json({ success: false, error: lastError });
+    const data = await res.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!reply) {
+      return NextResponse.json({ success: false, error: 'Empty reply from AI' });
+    }
+
+    return NextResponse.json({ success: true, reply });
   } catch (e) {
     console.error('AI Route Error:', e);
-    return NextResponse.json({ success: false, error: e.message });
+    return NextResponse.json({
+      success: false,
+      error: e.name === 'AbortError' ? 'Request timeout' : e.message,
+    });
   }
 }
