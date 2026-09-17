@@ -3,6 +3,28 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Sparkles, Bot, User, AlertTriangle, TreePine, Route, MapPin, FileDown, RefreshCw } from 'lucide-react';
 
+// PROTECTION CONSTANTS
+const DAILY_AI_LIMIT = 30; // max AI calls per browser per day
+const OTHER_PLACES = ['phoenix', 'chicago', 'houston', 'philadelphia', 'philly', 'miami', 'dallas', 'atlanta', 'boston', 'seattle', 'detroit', 'washington', 'los angeles', 'san francisco', 'denver', 'austin', 'orlando', 'las vegas', 'brooklyn', 'queens', 'bronx', 'staten', 'london', 'paris', 'tokyo', 'dubai', 'toronto'];
+
+const COVERAGE_ANSWER = '🗽 **Coverage: New York City (Manhattan) only**\n\nVERDANT 360\'s live analysis zone is currently limited to **Manhattan, NYC**, powered by FortyGuard 2m temperature intelligence at 20m² resolution. Other cities are not covered in this live demo.\n\nEvery circle on the Thermal Map is a live 2-meter human-level reading for Manhattan. Tap any tile for instant hyperlocal telemetry, or ask me about Manhattan heat risks, routes, trees, safety, or exports!';
+
+const getQuotaKey = () => `v360_ai_${new Date().toISOString().slice(0, 10)}`;
+const getQuotaUsed = () => {
+  try {
+    return parseInt(localStorage.getItem(getQuotaKey()) || '0', 10) || 0;
+  } catch (e) {
+    return 0;
+  }
+};
+const bumpQuota = () => {
+  try {
+    localStorage.setItem(getQuotaKey(), String(getQuotaUsed() + 1));
+  } catch (e) {
+    // ignore
+  }
+};
+
 export default function AiAdvisorWidget({ liveData, darkMode }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -57,16 +79,47 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
   ];
 
   const handleSend = async (text) => {
-    const msg = text || input;
-    if (!msg.trim() || isLoading) return;
+    const msg = (text || input).trim();
+    if (!msg || isLoading) return;
 
     setMessages((prev) => [...prev, { role: 'user', content: msg }]);
     setInput('');
+
+    const q = msg.toLowerCase();
+
+    // PROTECTION 1: Message length cap (spam/abuse se bachat)
+    if (msg.length > 300) {
+      setMessages((prev) => [...prev, { role: 'assistant', content: '🌿 Please keep your question under 300 characters so I can answer quickly and accurately!' }]);
+      return;
+    }
+
+    // PROTECTION 2: Scope guard — doosre sheher ka sawal = bina API use kiye jawab (quota bachta hai)
+    const mentionsOther = OTHER_PLACES.some((p) => q.includes(p));
+    const mentionsNYC = q.includes('new york') || q.includes('nyc') || q.includes('manhattan');
+    if (mentionsOther && !mentionsNYC) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setMessages((prev) => [...prev, { role: 'assistant', content: COVERAGE_ANSWER }]);
+        setIsLoading(false);
+      }, 400);
+      return;
+    }
+
+    // PROTECTION 3: Daily AI quota per browser (API limit protect)
+    if (getQuotaUsed() >= DAILY_AI_LIMIT) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setMessages((prev) => [...prev, { role: 'assistant', content: generateFallbackResponse(msg) + '\n\n*(Offline expert mode: daily AI demo limit reached — answers now come from the built-in knowledge base.)*' }]);
+        setIsLoading(false);
+      }, 300);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10000);
+      const timer = setTimeout(() => controller.abort(), 12000);
 
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -81,8 +134,9 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
       }
 
       const data = await res.json();
-      
+
       if (data.success && data.reply && data.reply.trim().length > 0) {
+        bumpQuota(); // sirf successful AI call count hoti hai
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
         setIsLoading(false);
         return;
@@ -91,8 +145,6 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
       }
     } catch (e) {
       console.error('AI API Error:', e);
-      console.log('Falling back to rule-based system...');
-      
       setTimeout(() => {
         setMessages((prev) => [...prev, { role: 'assistant', content: generateFallbackResponse(msg) }]);
         setIsLoading(false);
@@ -115,8 +167,8 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
       return '🌿 **VERDANT 360 — NYC Eco-Intelligence Platform**\n\n• 🗺️ Thermal Intelligence Map (Manhattan, live tiles)\n• 🌡️ FortyGuard 2m Telemetry gauges\n• 🚶 CoolPath™ shaded route comparer\n• 🌳 Tree Canopy Simulator\n• 🛡️ OSHA WBGT Work Safety timer\n• 🌬️ Live Air Quality layer\n• 📄 PDF / CSV / GeoJSON export with AI executive summary\n\nAsk me anything about Manhattan heat conditions!';
     }
 
-    if (q.includes('city') || q.includes('cities') || q.includes('cover') || q.includes('where') || q.includes('location') || q.includes('nyc') || q.includes('new york')) {
-      return '🗽 **Coverage: New York City (Manhattan)**\n\nVERDANT 360 currently focuses on a hyperlocal live analysis zone in **Manhattan**, powered by FortyGuard 2m temperature intelligence at 20m² resolution.\n\nEvery circle on the Thermal Map is a live 2-meter human-level reading. Tap any tile for instant hyperlocal telemetry!';
+    if (q.includes('city') || q.includes('cities') || q.includes('cover') || q.includes('where') || q.includes('location') || q.includes('nyc') || q.includes('new york') || q.includes('manhattan')) {
+      return COVERAGE_ANSWER;
     }
 
     if (q.includes('fortyguard') || q.includes('2m') || q.includes('satellite') || q.includes('accurate') || q.includes('precision')) {
@@ -295,6 +347,7 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     placeholder="Ask about NYC heat, routes, risks..."
                     disabled={isLoading}
+                    maxLength={300}
                     className={`flex-1 px-4 py-3 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-50 ${
                       darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white/70 border-emerald-100'
                     }`}
@@ -326,7 +379,14 @@ function ChatMessage({ message, darkMode }) {
     
     const lines = text.split('\n');
     return lines.map((line, i) => {
-      const parts = line.split(/(\*\*[^*]+\*\*)/g);
+      const trimmed = line.trim();
+      if (!trimmed) return <div key={i} className="h-2" />;
+      
+      // Bullet detect karein (• ya "- " ya "* ") — bold (**text**) ko bullet mat samjho
+      const isBullet = trimmed.startsWith('•') || /^-\s/.test(trimmed) || /^\*\s/.test(trimmed);
+      const cleanLine = isBullet ? trimmed.replace(/^[•\-*]\s*/, '') : trimmed;
+      
+      const parts = cleanLine.split(/(\*\*[^*]+\*\*)/g);
       const formattedParts = parts.map((part, j) => {
         if (part.startsWith('**') && part.endsWith('**')) {
           return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
@@ -334,16 +394,14 @@ function ChatMessage({ message, darkMode }) {
         return part;
       });
       
-      if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
+      if (isBullet) {
         return (
           <div key={i} className="flex gap-2 my-0.5">
-            <span className="text-emerald-500 font-bold">•</span>
+            <span className="text-emerald-500 font-bold flex-shrink-0">•</span>
             <span className="flex-1">{formattedParts}</span>
           </div>
         );
       }
-      
-      if (!line.trim()) return <div key={i} className="h-2" />;
       
       return <div key={i} className="my-0.5">{formattedParts}</div>;
     });
