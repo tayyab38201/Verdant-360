@@ -3,28 +3,6 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Sparkles, Bot, User, AlertTriangle, TreePine, Route, MapPin, FileDown, RefreshCw } from 'lucide-react';
 
-// PROTECTION CONSTANTS
-const DAILY_AI_LIMIT = 30; // max AI calls per browser per day
-const OTHER_PLACES = ['phoenix', 'chicago', 'houston', 'philadelphia', 'philly', 'miami', 'dallas', 'atlanta', 'boston', 'seattle', 'detroit', 'washington', 'los angeles', 'san francisco', 'denver', 'austin', 'orlando', 'las vegas', 'brooklyn', 'queens', 'bronx', 'staten', 'london', 'paris', 'tokyo', 'dubai', 'toronto'];
-
-const COVERAGE_ANSWER = '🗽 **Coverage: New York City (Manhattan) only**\n\nVERDANT 360\'s live analysis zone is currently limited to **Manhattan, NYC**, powered by FortyGuard 2m temperature intelligence at 20m² resolution. Other cities are not covered in this live demo.\n\nEvery circle on the Thermal Map is a live 2-meter human-level reading for Manhattan. Tap any tile for instant hyperlocal telemetry, or ask me about Manhattan heat risks, routes, trees, safety, or exports!';
-
-const getQuotaKey = () => `v360_ai_${new Date().toISOString().slice(0, 10)}`;
-const getQuotaUsed = () => {
-  try {
-    return parseInt(localStorage.getItem(getQuotaKey()) || '0', 10) || 0;
-  } catch (e) {
-    return 0;
-  }
-};
-const bumpQuota = () => {
-  try {
-    localStorage.setItem(getQuotaKey(), String(getQuotaUsed() + 1));
-  } catch (e) {
-    // ignore
-  }
-};
-
 export default function AiAdvisorWidget({ liveData, darkMode }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -84,39 +62,9 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
 
     setMessages((prev) => [...prev, { role: 'user', content: msg }]);
     setInput('');
-
-    const q = msg.toLowerCase();
-
-    // PROTECTION 1: Message length cap (spam/abuse se bachat)
-    if (msg.length > 300) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: '🌿 Please keep your question under 300 characters so I can answer quickly and accurately!' }]);
-      return;
-    }
-
-    // PROTECTION 2: Scope guard — doosre sheher ka sawal = bina API use kiye jawab (quota bachta hai)
-    const mentionsOther = OTHER_PLACES.some((p) => q.includes(p));
-    const mentionsNYC = q.includes('new york') || q.includes('nyc') || q.includes('manhattan');
-    if (mentionsOther && !mentionsNYC) {
-      setIsLoading(true);
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { role: 'assistant', content: COVERAGE_ANSWER }]);
-        setIsLoading(false);
-      }, 400);
-      return;
-    }
-
-    // PROTECTION 3: Daily AI quota per browser (API limit protect)
-    if (getQuotaUsed() >= DAILY_AI_LIMIT) {
-      setIsLoading(true);
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { role: 'assistant', content: generateFallbackResponse(msg) + '\n\n*(Offline expert mode: daily AI demo limit reached — answers now come from the built-in knowledge base.)*' }]);
-        setIsLoading(false);
-      }, 300);
-      return;
-    }
-
     setIsLoading(true);
 
+    // Seedha AI API par bhejte hain — koi artificial block nahi
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 12000);
@@ -136,7 +84,6 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
       const data = await res.json();
 
       if (data.success && data.reply && data.reply.trim().length > 0) {
-        bumpQuota(); // sirf successful AI call count hoti hai
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
         setIsLoading(false);
         return;
@@ -144,6 +91,7 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
         throw new Error('Invalid response from AI');
       }
     } catch (e) {
+      // Sirf tab fallback chalega jab internet/API bilkul down ho
       console.error('AI API Error:', e);
       setTimeout(() => {
         setMessages((prev) => [...prev, { role: 'assistant', content: generateFallbackResponse(msg) }]);
@@ -152,6 +100,7 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
     }
   };
 
+  // Fallback sirf emergency cases ke liye (internet down, API error)
   const generateFallbackResponse = (query) => {
     const q = query.toLowerCase();
 
@@ -168,7 +117,7 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
     }
 
     if (q.includes('city') || q.includes('cities') || q.includes('cover') || q.includes('where') || q.includes('location') || q.includes('nyc') || q.includes('new york') || q.includes('manhattan')) {
-      return COVERAGE_ANSWER;
+      return '🗽 **Coverage: New York City (Manhattan)**\n\nVERDANT 360 currently focuses on a hyperlocal live analysis zone in **Manhattan**, powered by FortyGuard 2m temperature intelligence at 20m² resolution.\n\nEvery circle on the Thermal Map is a live 2-meter human-level reading. Tap any tile for instant hyperlocal telemetry!';
     }
 
     if (q.includes('fortyguard') || q.includes('2m') || q.includes('satellite') || q.includes('accurate') || q.includes('precision')) {
@@ -347,7 +296,6 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     placeholder="Ask about NYC heat, routes, risks..."
                     disabled={isLoading}
-                    maxLength={300}
                     className={`flex-1 px-4 py-3 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-50 ${
                       darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white/70 border-emerald-100'
                     }`}
