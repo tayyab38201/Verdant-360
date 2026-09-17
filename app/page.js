@@ -8,6 +8,7 @@ import CoolRoutePlanner from '@/components/CoolRoutePlanner';
 import GreeningSimulator from '@/components/GreeningSimulator';
 import HydrationSafetyWidget from '@/components/HydrationSafetyWidget';
 import AiAdvisorWidget from '@/components/AiAdvisorWidget';
+import AiSummarySection from '@/components/AiSummarySection';
 import ReportExporter from '@/components/ReportExporter';
 import { Leaf, MapPin, Zap, TrendingDown, TreePine, Users, Building, AlertTriangle, CheckCircle, TrendingUp, Globe, Sparkles } from 'lucide-react';
 const VerdantMap = dynamic(() => import('@/components/VerdantMap'), {
@@ -188,10 +189,14 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 space-y-6">
             <VerdantMap onLocationSelect={handleLocationSelect} darkMode={darkMode} />
+            
+            {/* AI SUMMARY SECTION - Map ke foran neeche */}
+            <AiSummarySection liveData={liveData} darkMode={darkMode} />
+            
             <ThermalTelemetry liveData={liveData} darkMode={darkMode} />
           </div>
 
-                    <div className="space-y-6">
+          <div className="space-y-6">
             <HydrationSafetyWidget liveData={liveData} darkMode={darkMode} />
             <GreeningSimulator liveData={liveData} darkMode={darkMode} />
             <CoolRoutePlanner darkMode={darkMode} />
@@ -348,7 +353,7 @@ export default function Home() {
         </motion.footer>
       </main>
 
-            <AiAdvisorWidget liveData={liveData} darkMode={darkMode} />
+      <AiAdvisorWidget liveData={liveData} darkMode={darkMode} />
     </div>
   );
 }
