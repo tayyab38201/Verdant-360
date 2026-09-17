@@ -64,10 +64,9 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
     setInput('');
     setIsLoading(true);
 
-    // STEP 1: Try REAL Gemini AI first
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 12000);
+      const timer = setTimeout(() => controller.abort(), 10000);
 
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -77,24 +76,30 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
       });
       clearTimeout(timer);
 
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const data = await res.json();
-      if (data.success && data.reply) {
+      
+      if (data.success && data.reply && data.reply.trim().length > 0) {
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
         setIsLoading(false);
         return;
+      } else {
+        throw new Error('Invalid response from AI');
       }
     } catch (e) {
-      console.warn('AI API failed, using fallback:', e);
+      console.error('AI API Error:', e);
+      console.log('Falling back to rule-based system...');
+      
+      setTimeout(() => {
+        setMessages((prev) => [...prev, { role: 'assistant', content: generateFallbackResponse(msg) }]);
+        setIsLoading(false);
+      }, 300);
     }
-
-    // STEP 2: Fallback to rule-based expert answers
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { role: 'assistant', content: generateFallbackResponse(msg) }]);
-      setIsLoading(false);
-    }, 500);
   };
 
-  // FALLBACK: Rule-based answers (used only if Gemini API fails)
   const generateFallbackResponse = (query) => {
     const q = query.toLowerCase();
 
@@ -102,16 +107,51 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
       const currentTemp = liveData?.temp || 32.5;
       const currentAQI = liveData?.aqi || 45;
       const currentHumidity = liveData?.humidity || 58;
-      let riskLevel = currentTemp > 35 ? 'HIGH' : (currentTemp > 30 ? 'MODERATE' : 'LOW');
-
+      const riskLevel = currentTemp > 35 ? 'HIGH' : currentTemp > 30 ? 'MODERATE' : 'LOW';
       return `📊 **Real-Time Dashboard Analysis**\n\nBased on live telemetry from Manhattan:\n\n• 🌡️ **Thermal Status:** Apparent temperature is **${currentTemp}°C** with **${currentHumidity}%** humidity.\n• 🌬️ **Air Quality:** Current US AQI is **${currentAQI}**.\n• 🛡️ **OSHA Risk Level:** **${riskLevel}**.\n\n**💡 Actionable Insight:** Activate CoolPath™ shaded routing and enforce 15-minute hydration breaks.`;
     }
 
-    if (q.includes('what can you do') || q.includes('help') || q.includes('feature')) {
-      return '🌿 **VERDANT 360 — NYC Eco-Intelligence Platform**\n\n• 🗺️ Thermal Intelligence Map (Manhattan)\n• 🌡️ FortyGuard 2m Telemetry\n• 🚶 CoolPath™ shaded routes\n• 🌳 Tree Canopy Simulator\n• 🛡️ OSHA Work Safety\n• 📄 PDF/CSV/GeoJSON Export';
+    if (q.includes('what can you do') || q.includes('about') || q.includes('help') || q.includes('feature') || q.includes('verdant')) {
+      return '🌿 **VERDANT 360 — NYC Eco-Intelligence Platform**\n\n• 🗺️ Thermal Intelligence Map (Manhattan, live tiles)\n• 🌡️ FortyGuard 2m Telemetry gauges\n• 🚶 CoolPath™ shaded route comparer\n• 🌳 Tree Canopy Simulator\n• 🛡️ OSHA WBGT Work Safety timer\n• 🌬️ Live Air Quality layer\n• 📄 PDF / CSV / GeoJSON export with AI executive summary\n\nAsk me anything about Manhattan heat conditions!';
     }
 
-    return "🌿 I'm currently experiencing a brief connectivity issue with my AI brain. Please try again in a moment, or click any quick question below!";
+    if (q.includes('city') || q.includes('cities') || q.includes('cover') || q.includes('where') || q.includes('location') || q.includes('nyc') || q.includes('new york')) {
+      return '🗽 **Coverage: New York City (Manhattan)**\n\nVERDANT 360 currently focuses on a hyperlocal live analysis zone in **Manhattan**, powered by FortyGuard 2m temperature intelligence at 20m² resolution.\n\nEvery circle on the Thermal Map is a live 2-meter human-level reading. Tap any tile for instant hyperlocal telemetry!';
+    }
+
+    if (q.includes('fortyguard') || q.includes('2m') || q.includes('satellite') || q.includes('accurate') || q.includes('precision')) {
+      return '🛰️ **Why 2m Height Matters**\n\nFortyGuard measures temperature at **2-meter human level** — not satellite ground heat. Every readout carries the "HUMAN LEVEL" badge, so WBGT, heat index and CoolPath scores reflect what a person actually feels on a Manhattan street.';
+    }
+
+    if (q.includes('air') || q.includes('aqi') || q.includes('pollution') || q.includes('pm2.5') || q.includes('pm10')) {
+      return '🌬️ **Live Air Quality Layer**\n\nReal-time PM2.5, PM10 and US AQI come from the **Open-Meteo Air Quality API**, fused with FortyGuard heat data into the combined Vulnerability Index (0-100) shown in the top stat cards.';
+    }
+
+    if (q.includes('export') || q.includes('download') || q.includes('pdf') || q.includes('csv') || q.includes('geojson')) {
+      return '📄 **One-Click Civic Data Exporter**\n\nHit the green "Export Report" button (top right):\n\n• **PDF Report** — now includes an AI-generated Executive Summary\n• **CSV Data** — spreadsheet-ready telemetry\n• **GeoJSON** — raw thermal tiles for GIS tools\n\nPerfect for city councils and OSHA compliance filings!';
+    }
+
+    if (q.includes('osha') || q.includes('wbgt') || q.includes('worker') || q.includes('safety') || q.includes('rest')) {
+      return '🛡️ **OSHA Work Safety Matrix**\n\nWBGT is computed from FortyGuard 2m apparent temp + humidity:\n\n• < 23°C LOW — normal work\n• 23-27°C MODERATE — scheduled hydration\n• 27-31°C HIGH — mandatory rest intervals\n• > 31°C EXTREME — work suspension advised\n\nThe live countdown timer enforces rest/hydration breaks.';
+    }
+
+    if (q.includes('risk') || q.includes('danger') || q.includes('heat') || q.includes('hot')) {
+      return '🌡️ **Current Heat Assessment**\n\nLive 2m telemetry shows elevated heat stress over Manhattan. Recommendations:\n\n• 15-min rest every hour in shade\n• 250ml water every 15-20 min\n• Use CoolPath™ shaded routes\n• Check the OSHA widget for your WBGT zone';
+    }
+
+    if (q.includes('tree') || q.includes('plant') || q.includes('canopy') || q.includes('green')) {
+      return '🌳 **Top Cooling Trees for NYC**\n\n• **London Plane** — broad canopy, drought tolerant\n• **Silver Birch** — fast-growing, reflective bark\n• **Norway Maple** — up to 6°C surface cooling\n• **Red Oak** — large spread, long-term benefit\n\nTry the Tree Canopy Simulator: 30%+ coverage gives up to -3.2°C cooling!';
+    }
+
+    if (q.includes('route') || q.includes('walk') || q.includes('cool path') || q.includes('coolpath')) {
+      return '🚶 **CoolPath™ Recommendation**\n\nThe shaded corridor saves **-4.4°C** vs the direct route:\n\n• Direct: 2.4 km · 28 min · heat stress 78\n• CoolPath: 2.9 km · 35 min · heat stress 42\n\n68% canopy coverage gives continuous shade 11AM-3PM.';
+    }
+
+    if (q.includes('hydration') || q.includes('water') || q.includes('drink')) {
+      return '💧 **OSHA Hydration Protocol**\n\n• Drink 250ml every 15-20 minutes\n• Electrolytes after 2 hours\n• Avoid caffeine & sugary drinks\n\nThe countdown timer in the OSHA widget automates your break schedule!';
+    }
+
+    return '🌿 I\'m the VERDANT 360 Climate Advisor for Manhattan, NYC. Try asking:\n\n• "What can you do?"\n• "Current heat risks?"\n• "Best trees for NYC?"\n• "Coolest walking routes?"\n• "How does export work?"\n• "Analyze current report"';
   };
 
   return (
@@ -278,17 +318,14 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
   );
 }
 
-// BEAUTIFUL MARKDOWN RENDERER
 function ChatMessage({ message, darkMode }) {
   const isUser = message.role === 'user';
   
-  // Simple markdown renderer: **bold**, \n, • bullets
   const formatContent = (text) => {
     if (!text) return null;
     
     const lines = text.split('\n');
     return lines.map((line, i) => {
-      // Handle bold text **text**
       const parts = line.split(/(\*\*[^*]+\*\*)/g);
       const formattedParts = parts.map((part, j) => {
         if (part.startsWith('**') && part.endsWith('**')) {
@@ -297,7 +334,6 @@ function ChatMessage({ message, darkMode }) {
         return part;
       });
       
-      // Handle bullet points
       if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
         return (
           <div key={i} className="flex gap-2 my-0.5">
@@ -307,10 +343,8 @@ function ChatMessage({ message, darkMode }) {
         );
       }
       
-      // Empty line
       if (!line.trim()) return <div key={i} className="h-2" />;
       
-      // Regular line
       return <div key={i} className="my-0.5">{formattedParts}</div>;
     });
   };
