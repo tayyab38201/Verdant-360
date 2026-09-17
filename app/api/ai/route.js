@@ -30,7 +30,7 @@ Answer concisely (max 120 words). Use markdown formatting (bold **text**, bullet
     }
     
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+    const timer = setTimeout(() => controller.abort(), 10000);
     
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
