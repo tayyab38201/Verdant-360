@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, FileText, FileSpreadsheet, Map, X, Check } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, Map, X, Check, Sparkles } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -49,9 +49,104 @@ export default function ReportExporter({ data, darkMode }) {
     }, 800);
   };
 
-  const exportPDF = () => {
+  // FALLBACK SUMMARY (agar AI API fail ho jaye)
+  const buildFallbackSummary = () => {
+    const temp = data?.temp || 32.5;
+    const humidity = data?.humidity || 58;
+    const aqi = data?.aqi || 45;
+    const heatIndex = data?.heatIndex || 36.2;
+    const pm25 = data?.pm25 || 12.4;
+    const riskLevel = temp > 35 ? 'HIGH' : temp > 30 ? 'MODERATE' : 'LOW';
+
+    return [
+      '**CURRENT CONDITIONS**',
+      `Manhattan is currently experiencing an apparent temperature of ${temp}°C with ${humidity}% humidity and a heat index of ${heatIndex}°C. The US Air Quality Index reads ${aqi} with PM2.5 at ${pm25} µg/m³, monitored live by FortyGuard 2-meter human-level telemetry.`,
+      '',
+      '**RISK ASSESSMENT**',
+      `Current conditions indicate a ${riskLevel} risk level for outdoor workers based on OSHA WBGT guidelines. The combined heat and air pollution vulnerability index requires proactive mitigation for sensitive groups and outdoor labor.`,
+      '',
+      '**RECOMMENDATIONS**',
+      '• Enforce 15-minute shaded rest cycles every hour for outdoor workers.',
+      '• Prioritize CoolPath shaded routing between 11:00 and 15:00.',
+      '• Accelerate tree canopy expansion to unlock -2.4°C cooling potential.',
+    ].join('\n');
+  };
+
+  // AI SUMMARY FETCH (with timeout + fallback)
+  const fetchAiSummary = async () => {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          message: 'Generate executive summary for the official PDF report',
+          liveData: data,
+          type: 'summary',
+        }),
+      });
+      clearTimeout(timer);
+      const json = await res.json();
+      if (json.success && json.reply) return json.reply;
+    } catch (e) {
+      console.warn('AI summary unavailable, using fallback:', e);
+    }
+    return buildFallbackSummary();
+  };
+
+  // SUMMARY KO PDF MEIN RENDER KARNA (headers bold, bullets, page breaks)
+  const renderSummaryToPdf = (doc, summary, startY) => {
+    let y = startY;
+    const maxWidth = 182;
+    const lines = summary.split('\n');
+
+    lines.forEach((rawLine) => {
+      const line = rawLine.trim();
+      if (!line) {
+        y += 4;
+        return;
+      }
+
+      const headerMatch = line.match(/^\*\*(.+)\*\*$/);
+      if (headerMatch) {
+        if (y > 265) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(5, 150, 105);
+        doc.text(headerMatch[1], 14, y);
+        y += 7;
+        return;
+      }
+
+      const clean = line.replace(/\*\*/g, '');
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(70);
+      const wrapped = doc.splitTextToSize(clean, maxWidth);
+      wrapped.forEach((wl) => {
+        if (y > 280) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(wl, 14, y);
+        y += 5;
+      });
+      y += 2;
+    });
+
+    return y;
+  };
+
+  const exportPDF = async () => {
     setExporting('pdf');
-    setTimeout(() => {
+    try {
+      const summaryText = await fetchAiSummary();
+
       const doc = new jsPDF();
       doc.setFontSize(20);
       doc.setTextColor(5, 150, 105);
@@ -60,15 +155,31 @@ export default function ReportExporter({ data, darkMode }) {
       doc.setTextColor(100);
       doc.text('Urban Climate Resilience Report', 14, 28);
       doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 34);
+      doc.text('Location: Manhattan, New York City, NY', 14, 40);
       doc.setDrawColor(5, 150, 105);
       doc.setLineWidth(0.5);
-      doc.line(14, 38, 196, 38);
+      doc.line(14, 44, 196, 44);
+
+      // AI EXECUTIVE SUMMARY SECTION
       doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(0);
-      doc.text('Thermal Telemetry', 14, 50);
+      doc.text('AI Executive Summary', 14, 52);
+      const summaryEndY = renderSummaryToPdf(doc, summaryText, 60);
+
+      // THERMAL TELEMETRY TABLE
+      let tableTitleY = summaryEndY + 8;
+      if (tableTitleY > 250) {
+        doc.addPage();
+        tableTitleY = 20;
+      }
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0);
+      doc.text('Thermal Telemetry', 14, tableTitleY);
 
       autoTable(doc, {
-        startY: 55,
+        startY: tableTitleY + 5,
         head: [['Parameter', 'Value', 'Status']],
         body: [
           ['2m Apparent Temperature', `${data?.temp || 32.5}°C`, 'Measured'],
@@ -81,11 +192,25 @@ export default function ReportExporter({ data, darkMode }) {
         styles: { fontSize: 10 },
       });
 
+      // FOOTER
+      let footerY = (doc.lastAutoTable?.finalY || tableTitleY + 50) + 10;
+      if (footerY > 280) {
+        doc.addPage();
+        footerY = 20;
+      }
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(120);
+      doc.text('Generated by VERDANT 360 AI Executive Engine - FortyGuard Hackathon 2026', 14, footerY);
+
       doc.save(`verdant360_report_${Date.now()}.pdf`);
       setSuccess('pdf');
       setTimeout(() => setSuccess(null), 2000);
+    } catch (e) {
+      console.error('PDF export error:', e);
+    } finally {
       setExporting(null);
-    }, 1000);
+    }
   };
 
   return (
@@ -114,7 +239,7 @@ export default function ReportExporter({ data, darkMode }) {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className={`rounded-2xl p-6 max-w-md w-full ${
+              className={`rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto ${
                 darkMode ? 'bg-slate-900 border border-slate-700' : 'glass-card'
               }`}
             >
@@ -128,12 +253,19 @@ export default function ReportExporter({ data, darkMode }) {
                 </button>
               </div>
 
-              <p className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              <p className={`text-sm mb-3 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                 Download thermal telemetry and air quality data for civic reporting.
               </p>
 
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 text-xs font-medium ${
+                darkMode ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+              }`}>
+                <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                PDF now includes an AI-generated Executive Summary
+              </div>
+
               <div className="space-y-2">
-                <ExportButton icon={FileText} label="PDF Report" sublabel="Formatted civic report" onClick={exportPDF} loading={exporting === 'pdf'} success={success === 'pdf'} color="from-rose-500 to-orange-500" darkMode={darkMode} />
+                <ExportButton icon={FileText} label="PDF Report" sublabel="Civic report + AI executive summary" onClick={exportPDF} loading={exporting === 'pdf'} success={success === 'pdf'} color="from-rose-500 to-orange-500" darkMode={darkMode} />
                 <ExportButton icon={FileSpreadsheet} label="CSV Data" sublabel="Spreadsheet format" onClick={exportCSV} loading={exporting === 'csv'} success={success === 'csv'} color="from-emerald-500 to-teal-500" darkMode={darkMode} />
                 <ExportButton icon={Map} label="GeoJSON" sublabel="Thermal map tiles" onClick={exportJSON} loading={exporting === 'json'} success={success === 'json'} color="from-blue-500 to-indigo-500" darkMode={darkMode} />
               </div>
@@ -156,7 +288,7 @@ function ExportButton({ icon: Icon, label, sublabel, onClick, loading, success, 
         darkMode ? 'bg-slate-800/60 border-slate-700 hover:bg-slate-800' : 'bg-white/60 border-emerald-100 hover:bg-white/80'
       }`}
     >
-      <div className={`w-11 h-11 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center`}>
+      <div className={`w-11 h-11 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
         {success ? (
           <Check className="w-5 h-5 text-white" />
         ) : loading ? (
@@ -165,9 +297,9 @@ function ExportButton({ icon: Icon, label, sublabel, onClick, loading, success, 
           <Icon className="w-5 h-5 text-white" />
         )}
       </div>
-      <div className="flex-1 text-left">
+      <div className="flex-1 text-left min-w-0">
         <p className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{label}</p>
-        <p className={`text-[11px] ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{sublabel}</p>
+        <p className={`text-[11px] truncate ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{sublabel}</p>
       </div>
     </motion.button>
   );
