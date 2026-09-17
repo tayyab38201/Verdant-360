@@ -64,7 +64,6 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
     setInput('');
     setIsLoading(true);
 
-    // Seedha AI API par bhejte hain — koi artificial block nahi
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 12000);
@@ -77,21 +76,20 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
       });
       clearTimeout(timer);
 
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP error! status: ${res.status}`);
+      }
 
       if (data.success && data.reply && data.reply.trim().length > 0) {
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
         setIsLoading(false);
         return;
       } else {
-        throw new Error('Invalid response from AI');
+        throw new Error(data.error || 'Invalid response from AI');
       }
     } catch (e) {
-      // Sirf tab fallback chalega jab internet/API bilkul down ho
       console.error('AI API Error:', e);
       setTimeout(() => {
         setMessages((prev) => [...prev, { role: 'assistant', content: generateFallbackResponse(msg) }]);
@@ -100,7 +98,6 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
     }
   };
 
-  // Fallback sirf emergency cases ke liye (internet down, API error)
   const generateFallbackResponse = (query) => {
     const q = query.toLowerCase();
 
@@ -194,7 +191,6 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
               darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white/95 backdrop-blur-xl border-emerald-200/60'
             }`}>
               
-              {/* HEADER */}
               <div className={`flex items-center justify-between p-4 border-b ${darkMode ? 'border-slate-700' : 'border-emerald-100/60'}`}>
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
@@ -231,7 +227,6 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
                   <ChatMessage key={idx} message={msg} darkMode={darkMode} />
                 ))}
                 
-                {/* AI TYPING INDICATOR */}
                 {isLoading && (
                   <div className="flex gap-2">
                     <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -330,7 +325,6 @@ function ChatMessage({ message, darkMode }) {
       const trimmed = line.trim();
       if (!trimmed) return <div key={i} className="h-2" />;
       
-      // Bullet detect karein (• ya "- " ya "* ") — bold (**text**) ko bullet mat samjho
       const isBullet = trimmed.startsWith('•') || /^-\s/.test(trimmed) || /^\*\s/.test(trimmed);
       const cleanLine = isBullet ? trimmed.replace(/^[•\-*]\s*/, '') : trimmed;
       
