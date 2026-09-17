@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+const MODELS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
+
 export async function POST(req) {
   try {
     const { message, liveData, type } = await req.json();
@@ -33,55 +35,57 @@ Platform features: Thermal Map with FortyGuard 2m tiles (Manhattan only), Therma
 Answer concisely (max 120 words). Use markdown formatting (bold **text**, bullet points with •). If the question is completely outside urban climate or this platform, politely steer the conversation back to the dashboard features.`;
     }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
+    const prompt = context + '\n\nUser question: ' + (message || 'Generate executive summary');
+    let lastError = 'Unknown error';
 
-    // Official Google curl style: x-goog-api-key header + gemini-flash-latest model
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': key,
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: context + '\n\nUser question: ' + (message || 'Generate executive summary') }],
+    for (const model of MODELS) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 9000);
+
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': key,
             },
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 800,
-          },
-        }),
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+            }),
+          }
+        );
+        clearTimeout(timer);
+
+        if (res.ok) {
+          const data = await res.json();
+          const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (reply) {
+            return NextResponse.json({ success: true, reply });
+          }
+          lastError = 'Empty reply from ' + model;
+          continue;
+        }
+
+        const errData = await res.json().catch(() => null);
+        lastError = `HTTP ${res.status}: ${errData?.error?.message || 'no message'}`;
+
+        if (res.status === 403 || res.status === 401) {
+          break;
+        }
+      } catch (e) {
+        clearTimeout(timer);
+        lastError = e.name === 'AbortError' ? 'Request timeout' : e.message;
       }
-    );
-    clearTimeout(timer);
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      console.error('Gemini API error:', res.status, errText.slice(0, 300));
-      return NextResponse.json({ success: false, error: `Gemini API error ${res.status}` });
     }
 
-    const data = await res.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!reply) {
-      console.error('Gemini empty reply:', JSON.stringify(data).slice(0, 300));
-      return NextResponse.json({ success: false, error: 'No reply from AI' });
-    }
-
-    return NextResponse.json({ success: true, reply });
+    console.error('Gemini final error:', lastError);
+    return NextResponse.json({ success: false, error: lastError });
   } catch (e) {
     console.error('AI Route Error:', e);
-    return NextResponse.json({
-      success: false,
-      error: e.name === 'AbortError' ? 'Request timeout' : e.message,
-    });
+    return NextResponse.json({ success: false, error: e.message });
   }
 }
