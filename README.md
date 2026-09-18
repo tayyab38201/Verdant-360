@@ -5,6 +5,7 @@
   <img src="https://img.shields.io/badge/FortyGuard-API-10b981?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Vercel-Live-black?style=for-the-badge&logo=vercel" />
   <img src="https://img.shields.io/badge/Groq-Llama_3-black?style=for-the-badge&logo=meta" />
+  <img src="https://img.shields.io/badge/Llama_3-Powered-orange?style=for-the-badge&logo=meta" />
 </p>
 
 <h1 align="center">🌿 VERDANT 360</h1>
