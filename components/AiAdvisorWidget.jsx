@@ -200,7 +200,7 @@ export default function AiAdvisorWidget({ liveData, darkMode }) {
                     <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Climate Advisor</h3>
                     <p className="text-[11px] text-emerald-500 font-medium flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      Gemini AI · Online
+                      Llama 3 AI · Online
                     </p>
                   </div>
                 </div>
