@@ -5,6 +5,21 @@ import { Download, FileText, FileSpreadsheet, Map, X, Check, Sparkles } from 'lu
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// PDF-SAFE TEXT CLEANER
+// jsPDF ka standard font sirf WinAnsi characters support karta hai.
+// Unicode subscripts (PM₂.₅), smart quotes, special spaces, emojis = garbled text.
+const sanitizeForPdf = (text) => {
+  if (!text) return '';
+  return text
+    .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
+    .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+    .replace(/[\u2013\u2014\u2212]/g, '-')
+    .replace(/[₀-₉]/g, (c) => String('₀₁₂₃₄₅₆₇₈₉'.indexOf(c)))
+    .replace(/[⁰-⁹]/g, (c) => String('⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)))
+    .replace(/[^\x09\x0A\x0D\x20-\xFF\u2022]/g, '');
+};
+
 export default function ReportExporter({ data, darkMode }) {
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState(null);
@@ -28,13 +43,19 @@ export default function ReportExporter({ data, darkMode }) {
   const exportCSV = () => {
     setExporting('csv');
     setTimeout(() => {
+      const temp = Number(data?.temp ?? 32.5);
+      const heatIndex = Number(data?.heatIndex ?? 36.2);
+      const humidity = Number(data?.humidity ?? 58);
+      const aqi = Math.round(Number(data?.aqi ?? 45));
+      const pm25 = Number(data?.pm25 ?? 12.4);
+
       const csv = [
         ['Metric', 'Value', 'Unit', 'Timestamp'],
-        ['2m Apparent Temperature', data?.temp || 32.5, '°C', new Date().toISOString()],
-        ['Heat Index', data?.heatIndex || 36.2, '°C', new Date().toISOString()],
-        ['Relative Humidity', data?.humidity || 58, '%', new Date().toISOString()],
-        ['Air Quality Index', data?.aqi || 45, 'US AQI', new Date().toISOString()],
-        ['PM2.5', data?.pm25 || 12.4, 'µg/m³', new Date().toISOString()],
+        ['2m Apparent Temperature', temp.toFixed(1), 'C', new Date().toISOString()],
+        ['Heat Index', heatIndex.toFixed(1), 'C', new Date().toISOString()],
+        ['Relative Humidity', humidity.toFixed(1), '%', new Date().toISOString()],
+        ['Air Quality Index', aqi, 'US AQI', new Date().toISOString()],
+        ['PM2.5', pm25.toFixed(1), 'ug/m3', new Date().toISOString()],
       ].map((row) => row.join(',')).join('\n');
 
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -49,18 +70,17 @@ export default function ReportExporter({ data, darkMode }) {
     }, 800);
   };
 
-  // FALLBACK SUMMARY (agar AI API fail ho jaye)
   const buildFallbackSummary = () => {
-    const temp = data?.temp || 32.5;
-    const humidity = data?.humidity || 58;
-    const aqi = data?.aqi || 45;
-    const heatIndex = data?.heatIndex || 36.2;
-    const pm25 = data?.pm25 || 12.4;
-    const riskLevel = temp > 35 ? 'HIGH' : temp > 30 ? 'MODERATE' : 'LOW';
+    const temp = Number(data?.temp ?? 32.5).toFixed(1);
+    const humidity = Number(data?.humidity ?? 58).toFixed(1);
+    const aqi = Math.round(Number(data?.aqi ?? 45));
+    const heatIndex = Number(data?.heatIndex ?? 36.2).toFixed(1);
+    const pm25 = Number(data?.pm25 ?? 12.4).toFixed(1);
+    const riskLevel = Number(temp) > 35 ? 'HIGH' : Number(temp) > 30 ? 'MODERATE' : 'LOW';
 
     return [
       '**CURRENT CONDITIONS**',
-      `Manhattan is currently experiencing an apparent temperature of ${temp}°C with ${humidity}% humidity and a heat index of ${heatIndex}°C. The US Air Quality Index reads ${aqi} with PM2.5 at ${pm25} µg/m³, monitored live by FortyGuard 2-meter human-level telemetry.`,
+      `Manhattan is currently experiencing an apparent temperature of ${temp} C with ${humidity}% humidity and a heat index of ${heatIndex} C. The US Air Quality Index reads ${aqi} with PM2.5 at ${pm25} ug/m3, monitored live by FortyGuard 2-meter human-level telemetry.`,
       '',
       '**RISK ASSESSMENT**',
       `Current conditions indicate a ${riskLevel} risk level for outdoor workers based on OSHA WBGT guidelines. The combined heat and air pollution vulnerability index requires proactive mitigation for sensitive groups and outdoor labor.`,
@@ -68,11 +88,10 @@ export default function ReportExporter({ data, darkMode }) {
       '**RECOMMENDATIONS**',
       '• Enforce 15-minute shaded rest cycles every hour for outdoor workers.',
       '• Prioritize CoolPath shaded routing between 11:00 and 15:00.',
-      '• Accelerate tree canopy expansion to unlock -2.4°C cooling potential.',
+      '• Accelerate tree canopy expansion to unlock -2.4 C cooling potential.',
     ].join('\n');
   };
 
-  // AI SUMMARY FETCH (with timeout + fallback)
   const fetchAiSummary = async () => {
     try {
       const controller = new AbortController();
@@ -96,11 +115,10 @@ export default function ReportExporter({ data, darkMode }) {
     return buildFallbackSummary();
   };
 
-  // SUMMARY KO PDF MEIN RENDER KARNA (headers bold, bullets, page breaks)
   const renderSummaryToPdf = (doc, summary, startY) => {
     let y = startY;
-    const maxWidth = 182;
-    const lines = summary.split('\n');
+    const maxWidth = 180;
+    const lines = sanitizeForPdf(summary).split('\n');
 
     lines.forEach((rawLine) => {
       const line = rawLine.trim();
@@ -111,7 +129,7 @@ export default function ReportExporter({ data, darkMode }) {
 
       const headerMatch = line.match(/^\*\*(.+)\*\*$/);
       if (headerMatch) {
-        if (y > 265) {
+        if (y > 262) {
           doc.addPage();
           y = 20;
         }
@@ -129,7 +147,7 @@ export default function ReportExporter({ data, darkMode }) {
       doc.setTextColor(70);
       const wrapped = doc.splitTextToSize(clean, maxWidth);
       wrapped.forEach((wl) => {
-        if (y > 280) {
+        if (y > 282) {
           doc.addPage();
           y = 20;
         }
@@ -147,6 +165,12 @@ export default function ReportExporter({ data, darkMode }) {
     try {
       const summaryText = await fetchAiSummary();
 
+      const temp = Number(data?.temp ?? 32.5);
+      const heatIndex = Number(data?.heatIndex ?? 36.2);
+      const humidity = Number(data?.humidity ?? 58);
+      const aqi = Math.round(Number(data?.aqi ?? 45));
+      const pm25 = Number(data?.pm25 ?? 12.4);
+
       const doc = new jsPDF();
       doc.setFontSize(20);
       doc.setTextColor(5, 150, 105);
@@ -160,14 +184,12 @@ export default function ReportExporter({ data, darkMode }) {
       doc.setLineWidth(0.5);
       doc.line(14, 44, 196, 44);
 
-      // AI EXECUTIVE SUMMARY SECTION
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0);
       doc.text('AI Executive Summary', 14, 52);
       const summaryEndY = renderSummaryToPdf(doc, summaryText, 60);
 
-      // THERMAL TELEMETRY TABLE
       let tableTitleY = summaryEndY + 8;
       if (tableTitleY > 250) {
         doc.addPage();
@@ -182,17 +204,16 @@ export default function ReportExporter({ data, darkMode }) {
         startY: tableTitleY + 5,
         head: [['Parameter', 'Value', 'Status']],
         body: [
-          ['2m Apparent Temperature', `${data?.temp || 32.5}°C`, 'Measured'],
-          ['Heat Index', `${data?.heatIndex || 36.2}°C`, 'Elevated'],
-          ['Relative Humidity', `${data?.humidity || 58}%`, 'Normal'],
-          ['Air Quality Index', `${data?.aqi || 45}`, 'Good'],
-          ['PM2.5', `${data?.pm25 || 12.4} µg/m³`, 'Acceptable'],
+          ['2m Apparent Temperature', `${temp.toFixed(1)} C`, 'Measured'],
+          ['Heat Index', `${heatIndex.toFixed(1)} C`, heatIndex > 40 ? 'Extreme' : heatIndex > 32 ? 'Elevated' : 'Normal'],
+          ['Relative Humidity', `${humidity.toFixed(1)}%`, 'Normal'],
+          ['Air Quality Index', `${aqi}`, aqi <= 50 ? 'Good' : aqi <= 100 ? 'Moderate' : 'Unhealthy'],
+          ['PM2.5', `${pm25.toFixed(1)} ug/m3`, pm25 <= 12 ? 'Acceptable' : 'Elevated'],
         ],
         headStyles: { fillColor: [5, 150, 105] },
         styles: { fontSize: 10 },
       });
 
-      // FOOTER
       let footerY = (doc.lastAutoTable?.finalY || tableTitleY + 50) + 10;
       if (footerY > 280) {
         doc.addPage();
@@ -261,7 +282,7 @@ export default function ReportExporter({ data, darkMode }) {
                 darkMode ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
               }`}>
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
-                PDF now includes an AI-generated Executive Summary
+                PDF includes an AI-generated Executive Summary
               </div>
 
               <div className="space-y-2">
