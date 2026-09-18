@@ -119,7 +119,7 @@ Current conditions indicate a ${riskLevel} risk level for outdoor workers based 
               AI Executive Summary
             </h3>
             <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              Powered by Gemini AI · Live Manhattan telemetry
+              Powered by Llama 3 AI · Live Manhattan telemetry
             </p>
           </div>
         </div>
