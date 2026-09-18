@@ -3,15 +3,15 @@ import { NextResponse } from 'next/server';
 export async function POST(req) {
   try {
     const { message, liveData, type } = await req.json();
-    const key = process.env.GEMINI_API_KEY;
+    const key = process.env.GROQ_API_KEY;
 
     if (!key) {
       return NextResponse.json({ success: false, error: 'API key not configured' });
     }
 
-    let context;
+    let systemPrompt;
     if (type === 'summary') {
-      context = `You are writing a professional executive summary for VERDANT 360, an urban climate dashboard focused on Manhattan, NYC. 
+      systemPrompt = `You are writing a professional executive summary for VERDANT 360, an urban climate dashboard focused on Manhattan, NYC. 
 Use the live telemetry data to write a 3-paragraph executive summary.
 Format with these exact headers using markdown bold (**HEADER**):
 **CURRENT CONDITIONS** - describe temperature, humidity, heat index, AQI, PM2.5
@@ -22,7 +22,7 @@ Live data: apparent temp ${liveData?.temp ?? 32.5}°C, heat index ${liveData?.he
 
 Keep it professional, concise (max 200 words), civic-focused.`;
     } else {
-      context = `You are the VERDANT 360 Climate Advisor, an intelligent AI assistant for a live urban heat dashboard.
+      systemPrompt = `You are the VERDANT 360 Climate Advisor, an intelligent AI assistant for a live urban heat dashboard.
 
 STRICT COVERAGE RULE: This live demo is EXCLUSIVELY focused on New York City (Manhattan). If the user asks about ANY other city, state, or country (e.g., Arizona, Phoenix, Chicago, London, Washington DC), politely inform them that live coverage is currently limited to Manhattan, NYC, and invite them to ask about Manhattan's climate data, features, or safety protocols. Do NOT make up data for other locations.
 
@@ -33,43 +33,38 @@ Platform features: Thermal Map with FortyGuard 2m tiles (Manhattan only), Therma
 Answer concisely (max 120 words). Use markdown formatting (bold **text**, bullet points with •). If the question is completely outside urban climate or this platform, politely steer the conversation back to the dashboard features.`;
     }
 
-    const prompt = context + '\n\nUser question: ' + (message || 'Generate executive summary');
-
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
 
-    // EXACT CURL FORMAT: Header only, no query param, gemini-flash-latest
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': key.trim(),
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: prompt }
-              ]
-            }
-          ],
-        }),
-      }
-    );
+    // GROQ API CALL (Lightning fast Llama 3)
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key.trim()}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message || 'Generate executive summary' },
+        ],
+        temperature: 0.7,
+        max_tokens: 800,
+      }),
+    });
     clearTimeout(timer);
 
     if (!res.ok) {
       const errData = await res.json().catch(() => null);
       const errMsg = errData?.error?.message || `HTTP ${res.status}`;
-      console.error('Gemini error:', errMsg);
+      console.error('Groq error:', errMsg);
       return NextResponse.json({ success: false, error: errMsg });
     }
 
     const data = await res.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const reply = data?.choices?.[0]?.message?.content;
 
     if (!reply) {
       return NextResponse.json({ success: false, error: 'Empty reply from AI' });
