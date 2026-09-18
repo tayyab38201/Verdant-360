@@ -46,8 +46,9 @@
 | 🌳 **Tree Canopy Simulator** | Model urban greening impact (-0.5°C to -3.2°C cooling) in real-time |
 | 🛡️ **OSHA Work Safety Matrix** | WBGT risk calculator with live rest/hydration countdown timer |
 | 🌬️ **Air Quality Layer** | Real-time PM2.5, PM10, US AQI via Open-Meteo hybrid scoring |
-| 🤖 **AI Climate Advisor** | Draggable chatbot with deep project expertise |
-| 📄 **Civic Data Exporter** | One-click PDF, CSV & GeoJSON downloads |
+| 🤖 **AI Climate Advisor** | Draggable chatbot powered by Groq's LLM with live telemetry context |
+| ✨ **AI Executive Summary** | One-click AI-generated professional analysis of current Manhattan conditions |
+| 📄 **Civic Data Exporter** | One-click PDF (with AI summary), CSV & GeoJSON downloads |
 | 🌙 **Dark/Light Theme** | Smooth toggle with full responsiveness |
 | 📱 **Mobile-First Design** | Touch-friendly with tap-activated effects |
 
@@ -59,7 +60,8 @@ This project was developed with **AI-assisted engineering** using advanced LLM p
 
 - 🎨 **Award-winning UI/UX design** — $100M-tier SaaS polish (Stripe/Vercel aesthetic)
 - 🏗️ **Production-ready architecture** — App Router patterns, SSR safety, Vercel optimization
-- 🔌 **Real API integration** — FortyGuard + Open-Meteo with async polling
+- 🔌 **Real API integration** — FortyGuard + Open-Meteo + Groq AI with async polling
+- 🧠 **AI Feature Engineering** — Groq LLM integration for real-time climate advisory & executive summaries
 - 🐛 **Debugging & fixes** — Hydration mismatches, peer dependencies, timeout issues
 - 📱 **Responsive engineering** — Mobile-first with touch-optimized interactions
 - 📖 **Complete documentation** — This very README was AI-assisted!
@@ -80,6 +82,7 @@ This project was developed with **AI-assisted engineering** using advanced LLM p
 | **Charts** | Recharts (Radial gauges) |
 | **Icons** | Lucide React |
 | **PDF Export** | jsPDF + jspdf-autotable |
+| **AI Engine** | Groq API (openai/gpt-oss-20b) |
 | **APIs** | FortyGuard (thermal) + Open-Meteo (air quality) |
 | **Hosting** | Vercel (Free Hobby Tier) |
 
@@ -113,6 +116,7 @@ Create .env.local file in project root:
 New-Item -ItemType File -Path ".env.local" -Force
 Then open .env.local and add:
 FORTYGUARD_API_KEY=your_fortyguard_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
 Step 6: Start Development Server
 npm run dev
 🌐 Deploy to Vercel (Free)
@@ -120,15 +124,18 @@ Option A: Via Vercel Dashboard (Recommended)
 Go to vercel.com → Sign up with GitHub
 Click "Add New..." → "Project"
 Import Verdant-360 repository
-Add Environment Variable:
+Add Environment Variables:
 Name: FORTYGUARD_API_KEY
 Value: Your FortyGuard API key
+Name: GROQ_API_KEY
+Value: Your Groq API key
 Environments: ✅ Production, ✅ Preview, ✅ Development
 Click Deploy
 Wait 2-4 minutes → Your site is live!
 verdant-360/
 ├── app/
 │   ├── api/
+│   │   ├── ai/route.js               # Groq AI integration (chatbot + summaries)
 │   │   ├── fortyguard/route.js       # FortyGuard API proxy (Vercel-safe polling)
 │   │   └── air-quality/route.js      # Open-Meteo air quality
 │   ├── globals.css                   # Global styles + animations
@@ -137,12 +144,13 @@ verdant-360/
 ├── components/
 │   ├── Header.jsx                    # Top navbar with live stats
 │   ├── VerdantMap.jsx                # Interactive Leaflet heat map
+│   ├── AiSummarySection.jsx          # AI Executive Summary generator
 │   ├── ThermalTelemetry.jsx          # Radial gauges
 │   ├── CoolRoutePlanner.jsx          # Route comparer
 │   ├── GreeningSimulator.jsx         # Tree canopy impact model
 │   ├── HydrationSafetyWidget.jsx     # OSHA WBGT calculator
 │   ├── AiAdvisorWidget.jsx           # Draggable AI chatbot
-│   └── ReportExporter.jsx            # PDF/CSV/GeoJSON export
+│   └── ReportExporter.jsx            # PDF (with AI summary)/CSV/GeoJSON export
 ├── public/
 ├── .env.local                        # Environment variables (gitignored)
 ├── next.config.mjs                   # Next.js configuration
@@ -162,4 +170,4 @@ npm start
 Remove-Item -Recurse -Force .next
 npm run dev
 # Full setup from scratch
-git clone https://github.com/tayyab38201/Verdant-360.git; cd Verdant-360; npm install framer-motion recharts leaflet react-leaflet@5 lucide-react jspdf jspdf-autotable; npm install -D tailwindcss@3.4.1 postcss autoprefixer; npx tailwindcss init -p; npm run dev
+git clone https://github.com/tayyab38201/Verdant-360.git cd Verdant-360; npm install framer-motion recharts leaflet react-leaflet@5 lucide-react jspdf jspdf-autotable; npm install -D tailwindcss@3.4.1 postcss autoprefixer; npx tailwindcss init -p; npm run dev
