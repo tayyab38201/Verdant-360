@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Tailwind-3.4-38bdf8?style=for-the-badge&logo=tailwindcss" />
   <img src="https://img.shields.io/badge/FortyGuard-API-10b981?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Vercel-Live-black?style=for-the-badge&logo=vercel" />
-  ![Llama 3 Powered](https://img.shields.io/badge/Llama_3-Powered-orange?style=for-the-badge&logo=meta)
+  <img src="https://img.shields.io/badge/Groq-Llama_3-black?style=for-the-badge&logo=meta" />
 </p>
 
 <h1 align="center">🌿 VERDANT 360</h1>
